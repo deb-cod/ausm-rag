@@ -36,11 +36,43 @@ class AdaptiveReranker:
             except OllamaError:
                 pass
         query_terms = set(tokenize(query))
+        match_targets = [query, *(exact_terms or [])]
+        compact_targets = [
+            compact_alphanumeric(target)
+            for target in match_targets
+            if len(compact_alphanumeric(target)) >= 8
+        ]
         for candidate in candidates:
             terms = set(tokenize(candidate.content))
             lexical = len(query_terms & terms) / max(1, len(query_terms))
-            candidate.score = 0.7 * candidate.score + 0.3 * lexical
+            compact_content = compact_alphanumeric(candidate.content)
+            direct_match = any(target in compact_content for target in compact_targets)
+            compact_coverage = max(
+                (self._compact_coverage(target, compact_content) for target in compact_targets),
+                default=0.0,
+            )
+            normalized_score = min(1.0, max(0.0, candidate.score))
+            if direct_match:
+                candidate.score = 0.8 + 0.2 * normalized_score
+            else:
+                candidate.score = (
+                    0.4 * normalized_score + 0.25 * lexical + 0.35 * compact_coverage
+                )
         return self._apply_trust_and_freshness(candidates)
+
+    @staticmethod
+    def _compact_coverage(target: str, content: str, ngram_size: int = 5) -> float:
+        if not target or not content:
+            return 0.0
+        if target in content:
+            return 1.0
+        if len(target) < ngram_size:
+            return float(target in content)
+        grams = {
+            target[offset : offset + ngram_size]
+            for offset in range(len(target) - ngram_size + 1)
+        }
+        return sum(gram in content for gram in grams) / max(1, len(grams))
 
     def _rerank_locator(
         self, query: str, candidates: list[SearchResult], exact_terms: list[str]

@@ -5,7 +5,12 @@ from app.llm.ollama_client import OllamaClient, OllamaError
 from app.llm.prompts import EVIDENCE_SYSTEM
 from app.llm.schemas import QueryPlan, QueryType, SufficiencyAssessment
 from app.retrieval.models import SearchResult
-from app.utils.text import find_numbered_heading, parse_locator_query, tokenize
+from app.utils.text import (
+    compact_alphanumeric,
+    find_numbered_heading,
+    parse_locator_query,
+    tokenize,
+)
 
 
 class EvidenceChecker:
@@ -81,6 +86,10 @@ class EvidenceChecker:
         }
         evidence_terms = set(tokenize(joined))
         lexical_coverage = len(query_terms & evidence_terms) / max(1, len(query_terms))
+        compact_query = compact_alphanumeric(plan.standalone_query)
+        direct_match = bool(compact_query) and any(
+            compact_query in compact_alphanumeric(item.content) for item in evidence
+        )
         dense_score = max((item.channel_scores.get("dense", 0.0) for item in evidence), default=0.0)
         if dense_score < self.settings.min_evidence_score and lexical_coverage < 0.1:
             return SufficiencyAssessment(
@@ -95,6 +104,8 @@ class EvidenceChecker:
             0.95,
             max(0.0, 0.45 * rank_score + 0.35 * max(0.0, dense_score) + 0.2 * lexical_coverage),
         )
+        if direct_match:
+            confidence = max(confidence, 0.95)
         return SufficiencyAssessment(
             sufficient=not missing,
             confidence=confidence if not missing else confidence * 0.5,

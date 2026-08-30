@@ -14,6 +14,10 @@ from `git clone` to a cited answer, see [architecture.md](architecture.md).
 For a complete beginner-friendly explanation of the project, installation, everyday use, document
 uploads, questions, and troubleshooting, see [explaination.md](explaination.md).
 
+For the most detailed plain-English handbook—including the complete architecture and data flows,
+setup, operations, troubleshooting, limitations, and all recent retrieval-quality changes—see
+[super_explaination.md](super_explaination.md).
+
 ## Requirements
 
 For the default Windows setup, use:
@@ -58,13 +62,15 @@ reconstructs it from `data/okf`.
 - **Ollama** runs query analysis and grounded generation locally with `gemma4:e4b`. Embeddings use
   `embeddinggemma`; the dimension is detected dynamically.
 - **Qdrant** stores named `dense` and `sparse` representations plus filterable payload metadata.
-  The sparse channel uses deterministic local term vectors and Qdrant collection-level IDF.
+  The sparse channel uses deterministic word and spacing-resistant character features with Qdrant
+  collection-level IDF.
 - **SQLite** stores documents, sessions, messages, structured query plans, comparison edges,
   retrieval runs/results, citations, feedback-ready records, and analytics—not embeddings.
 
 Hybrid search handles both semantic paraphrases and exact identifiers, names, policy terms, and
-error codes. Reciprocal-rank fusion combines the rankings without assuming their raw scores share a
-scale.
+error codes. Character features preserve exact matching when PDF extraction incorrectly joins words,
+such as `PDNtype,whichindicates...`. Reciprocal-rank fusion combines the rankings without assuming
+their raw scores share a scale.
 
 Comparison-aware retrieval searches each target independently and also searches the full question,
 preventing the target with more documentation from taking over the evidence set.
@@ -272,6 +278,11 @@ retrieval rounds, answer, and exact source chunks. Reuse the session ID for foll
 Questions asking which section, chapter, or page contains a named topic use an exact-heading lookup.
 This lookup tolerates PDF extraction that joins heading words together and returns a short, directly
 cited answer instead of a document summary.
+
+Quoted or near-quoted factual fragments receive a direct compact-phrase boost. For fragments such as
+`which indicates whether ...`, the answer layer can identify the immediately preceding subject from
+the evidence. Simple factual generation uses a small set of query-centered evidence excerpts to
+prevent unrelated surrounding material from taking over the answer.
 
 `POST /api/query/stream` uses server-sent events: `query_analyzed`, `retrieving`, `generating`,
 `token`, `sources`, and `done`. Only operational status and answer text are exposed—not internal

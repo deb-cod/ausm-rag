@@ -94,9 +94,19 @@ def test_comparison_fallback_and_canonical_sparse_indices(tmp_path: Path):
     assert plan.comparison_dimensions == ["filtering", "speed"]
     encoder = LocalSparseEncoder()
     first = encoder.encode("Qdrant filtering filtering")
-    second = encoder.encode("filtering Qdrant filtering")
+    second = encoder.encode("Qdrant filtering filtering")
     assert first.indices == second.indices
     assert first.values == second.values
+
+
+def test_sparse_encoder_matches_pdf_text_even_when_spaces_are_lost():
+    encoder = LocalSparseEncoder()
+    spaced = encoder.encode("which indicates whether the mobile supports IPv4 IPv6 or both")
+    joined = encoder.encode("whichindicateswhetherthemobilesupportsIPv4IPv6orboth")
+
+    shared_features = set(spaced.indices) & set(joined.indices)
+
+    assert len(shared_features) >= 20
 
 
 def test_retrieval_plan_and_citation_validation(tmp_path: Path):
@@ -202,6 +212,57 @@ async def test_locator_ranking_and_answer_use_numbered_heading(tmp_path: Path):
     assessment = await checker.assess(plan, ranked)
     assert assessment.sufficient
     assert assessment.confidence >= 0.7
+
+
+@pytest.mark.asyncio
+async def test_direct_clause_ranks_glued_pdf_passage_and_extracts_antecedent(tmp_path: Path):
+    query = "which indicates whether the mobile supports IPv4, IPv6 or both"
+    irrelevant = SearchResult(
+        chunk_id="unrelated",
+        document_id="doc",
+        concept_id="concept",
+        content=(
+            "The mobile supports voice over IMS. IPv4 and IPv6 addresses are assigned during "
+            "the broader attach procedure."
+        ),
+        title="Unrelated",
+        source_file="book.pdf",
+        source_sha256="abc",
+        okf_type="Reference",
+        score=0.95,
+    )
+    exact = SearchResult(
+        chunk_id="exact",
+        document_id="doc",
+        concept_id="concept",
+        content=(
+            "ThemobilethencomposesanESMmessage,PDNConnectivityRequest. "
+            "The message includes a\nPDNtype,whichindicateswhetherthemobile"
+            "supportsIPv4,IPv6orboth."
+        ),
+        title="Attach Request",
+        source_file="book.pdf",
+        source_sha256="abc",
+        okf_type="Reference",
+        score=0.55,
+    )
+    plan = QueryPlan(
+        original_query=query,
+        standalone_query=query,
+        query_type=QueryType.FACTUAL,
+    )
+    reranker = AdaptiveReranker(FailingClient(), enabled=True, top_k=8)  # type: ignore[arg-type]
+
+    ranked = await reranker.rerank(query, [irrelevant, exact], plan.query_type)
+
+    assert ranked[0].chunk_id == "exact"
+    assert AnswerGenerator._clause_answer(plan, ranked) == (
+        "The **PDN type** indicates whether the mobile supports IPv4, IPv6 or both [1]."
+    )
+    checker = EvidenceChecker(Settings(data_dir=tmp_path), FailingClient())  # type: ignore[arg-type]
+    assessment = await checker.assess(plan, ranked)
+    assert assessment.sufficient
+    assert assessment.confidence == 0.95
 
 
 def test_followup_comparison_rewriting(tmp_path: Path):

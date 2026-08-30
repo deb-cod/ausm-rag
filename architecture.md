@@ -90,8 +90,11 @@ dimension is hard-coded.
 ### 3.3 Retrieval is hybrid
 
 Dense retrieval is good at semantic paraphrases. Sparse retrieval is good at exact names, error
-codes, identifiers, and specialized vocabulary. The system independently queries both named Qdrant
-vectors and fuses their rankings using reciprocal rank fusion (RRF).
+codes, identifiers, and specialized vocabulary. Its word features are supplemented with down-weighted
+five-character features over text with spacing and punctuation removed. This lets a normal query
+match PDF output such as `whichindicateswhetherthemobile...` without making character matches
+stronger than healthy word matches. The system independently queries both named Qdrant vectors and
+fuses their rankings using reciprocal rank fusion (RRF).
 
 For a document at rank `r`, its contribution is approximately:
 
@@ -355,6 +358,10 @@ linked or sibling concepts. `MAX_GRAPH_HOPS` limits expansion and prevents conte
 Simple questions use the fused ranking plus deterministic relevance adjustment. Complex questions
 may send only the small fused set to `gemma4:e4b` for relevance grading.
 
+For simple questions, reranking measures ordinary token overlap and spacing-independent compact
+phrase coverage. A complete compact match receives an explicit directness preference, so a passage
+that nearly quotes the question outranks broader passages that merely share common words.
+
 Internal ranking also applies bounded adjustments:
 
 - human-reviewed over machine-confirmed over unverified;
@@ -380,6 +387,12 @@ Generation receives the original question, standalone question, query type, comp
 numbered evidence, source filename, heading, trust, status, and staleness. System prompts explicitly
 treat retrieved text as untrusted reference material, not instructions. The application never sends
 document content to arbitrary tools.
+
+Simple factual and definition questions send at most the first four query-centered excerpts to the
+generator. This reduces context drift and recency bias from long, unrelated chunks. A fragment that
+begins with `which`, `that`, or `who` takes a deterministic path when the matching clause is present:
+the system extracts the immediately preceding subject and cites that exact passage. For example,
+`which indicates whether the mobile supports IPv4, IPv6 or both` resolves to `PDN type`.
 
 Ollama thinking output is disabled for structured operations and user-visible answers. Only final
 answer content is accepted. Empty generations are retried once and then returned as a clear service

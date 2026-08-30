@@ -112,14 +112,18 @@ The system follows these steps:
 2. If it is a follow-up, it uses recent messages from the same `session_id` to understand what
    words such as “it,” “that,” or “the second option” refer to.
 3. It may divide a difficult question into several smaller searches.
-4. It performs a meaning-based search and an exact-word search.
+4. It performs a meaning-based search and an exact-word search. The exact search also uses small
+   character pieces, so it can still match words that a PDF reader accidentally glued together.
 5. It combines the two result lists so both meaning and precise wording matter.
 6. For comparison questions, it deliberately gathers evidence for each item being compared.
 7. It can follow useful links between related OKF concepts.
-8. It ranks the best passages, considering relevance, trust information, and freshness.
+8. It ranks the best passages, considering relevance, direct phrase matches, trust information, and
+   freshness. A passage that closely repeats the question is preferred over broad background text.
 9. It checks whether the evidence is strong enough and covers the whole question.
 10. If needed, it makes one bounded retry with a refined search.
-11. Gemma writes an answer using the retrieved passages.
+11. For a simple fact, the application gives Gemma only a few short excerpts centered on the query.
+    Certain quoted sentence fragments can be answered directly from their matching sentence. More
+    complex questions still use Gemma to write the supported answer.
 12. The answer, supporting sources, timing, and retrieval trace are recorded in SQLite.
 
 The system is “agentic” because it can adapt its search plan, not because it has unlimited control

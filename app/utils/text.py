@@ -41,6 +41,33 @@ def compact_alphanumeric(text: str) -> str:
     return "".join(character.casefold() for character in text if character.isalnum())
 
 
+def find_compact_span(text: str, needle: str) -> tuple[int, int] | None:
+    """Find text while ignoring whitespace and punctuation, retaining original offsets."""
+    compact_needle = compact_alphanumeric(needle)
+    if not compact_needle:
+        return None
+    compact_chars: list[str] = []
+    original_offsets: list[int] = []
+    for offset, character in enumerate(text):
+        if character.isalnum():
+            compact_chars.append(character.casefold())
+            original_offsets.append(offset)
+    compact_text = "".join(compact_chars)
+    start = compact_text.find(compact_needle)
+    if start < 0:
+        return None
+    end = start + len(compact_needle) - 1
+    return original_offsets[start], original_offsets[end] + 1
+
+
+def humanize_compound_label(text: str) -> str:
+    """Make common PDF-glued labels such as PDNtype readable without a dictionary."""
+    value = " ".join(text.split()).strip(" ,:;.-")
+    value = re.sub(r"([A-Z]{2,})([a-z]{2,})", r"\1 \2", value)
+    value = re.sub(r"(?<=[a-z0-9])(?=[A-Z])", " ", value)
+    return " ".join(value.split())
+
+
 def parse_locator_query(text: str) -> tuple[str, str] | None:
     """Return the requested location kind and subject for section/chapter/page questions."""
     for pattern in LOCATOR_PATTERNS:

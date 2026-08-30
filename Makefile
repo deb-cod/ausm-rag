@@ -1,16 +1,19 @@
-.PHONY: install run test lint qdrant-up qdrant-down rebuild evaluate
+.PHONY: install run ui test lint qdrant-up qdrant-down rebuild evaluate
 
 install:
-	python -m pip install -e ".[dev]"
+	python -m pip install -r requirements-dev.txt
 
 run:
 	python -m uvicorn app.main:app --reload
+
+ui:
+	python -m streamlit run frontend/app.py
 
 test:
 	python -m pytest -q
 
 lint:
-	python -m ruff check app tests
+	python -m ruff check app frontend tests
 
 qdrant-up:
 	docker compose up -d
@@ -23,4 +26,3 @@ rebuild:
 
 evaluate:
 	python -m app.cli evaluate
-

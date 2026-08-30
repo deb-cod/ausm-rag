@@ -16,6 +16,10 @@ Interactive documentation is available while the API is running:
 - ReDoc: `http://127.0.0.1:8000/redoc`
 - Raw OpenAPI schema: `http://127.0.0.1:8000/openapi.json`
 
+The complete Streamlit browser workspace is available at `http://127.0.0.1:8501` after running
+`python -m streamlit run frontend/app.py`. It exposes the operations documented here through a
+friendlier chat, library, operations, insights, and diagnostics interface.
+
 > This version has no authentication or authorization. Do not expose port `8000` to an untrusted
 > network or the public internet without adding authentication, authorization, TLS, rate limiting,
 > and an appropriate reverse proxy.

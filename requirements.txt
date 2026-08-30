@@ -1,0 +1,4 @@
+# Compatibility installer for users and deployment tools that expect requirements.txt.
+# Dependency versions remain defined once, in pyproject.toml. This installs the application and UI.
+-e .[ui]
+

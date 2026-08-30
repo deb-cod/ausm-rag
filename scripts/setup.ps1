@@ -45,7 +45,7 @@ if (-not (Test-Path -LiteralPath $VenvPython)) {
 
 Write-Host 'Installing Python dependencies...'
 & $VenvPython -m pip install --upgrade pip
-& $VenvPython -m pip install -e '.[dev]'
+& $VenvPython -m pip install -r requirements-dev.txt
 & $VenvPython -m pip check
 
 if (-not (Test-Path -LiteralPath '.env')) {
@@ -124,5 +124,8 @@ Write-Host ''
 Write-Host 'Setup complete.' -ForegroundColor Green
 Write-Host 'Start the API with:'
 Write-Host '  .\.venv\Scripts\python.exe -m uvicorn app.main:app --reload'
-Write-Host 'Then open http://127.0.0.1:8000/docs'
+Write-Host 'Start the Streamlit UI in another terminal with:'
+Write-Host '  .\.venv\Scripts\python.exe -m streamlit run frontend/app.py'
+Write-Host 'Then open http://127.0.0.1:8501'
+Write-Host 'API documentation remains available at http://127.0.0.1:8000/docs'
 Write-Host 'Run .\scripts\doctor.ps1 at any time to verify the installation.'

@@ -631,7 +631,7 @@ Stop the running API, open PowerShell in the project folder, and run:
 
 ```powershell
 git pull
-.\.venv\Scripts\python.exe -m pip install -e ".[dev]"
+.\.venv\Scripts\python.exe -m pip install -r requirements-dev.txt
 docker compose pull
 docker compose up -d
 .\scripts\doctor.ps1

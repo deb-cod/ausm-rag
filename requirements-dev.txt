@@ -1,0 +1,4 @@
+# Complete local-development environment: application, Streamlit UI, tests, and Ruff.
+# The canonical dependency definitions are in pyproject.toml.
+-e .[dev,ui]
+

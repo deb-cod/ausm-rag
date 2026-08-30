@@ -17,6 +17,7 @@ answers with citations or refuses to invent unsupported information.
 
 The normal runtime uses only local services:
 
+- Streamlit for the browser-based user interface;
 - FastAPI for the HTTP API;
 - Ollama with `gemma4:e4b` for query analysis and answer generation;
 - Ollama with `embeddinggemma` for dense embeddings;
@@ -34,14 +35,18 @@ the host so Ollama can use the host's available CPU/GPU configuration without ex
 
 ```mermaid
 flowchart LR
-    User[User or API client]
+    User[Browser user]
+    Client[API client or Swagger]
+    UI[Streamlit UI\nlocalhost:8501]
     API[FastAPI\nlocalhost:8000]
     Ollama[Ollama\nlocalhost:11434]
     Qdrant[Qdrant container\nlocalhost:6333 / 6334]
     SQLite[(SQLite\ndata/database)]
     Files[(Local knowledge files\ndata/)]
 
-    User -->|HTTP / JSON / multipart| API
+    User -->|browser interaction| UI
+    UI -->|HTTP / JSON / multipart / SSE| API
+    Client -->|HTTP / JSON / multipart / SSE| API
     API -->|chat and embeddings| Ollama
     API -->|dense and sparse points| Qdrant
     API -->|metadata and traces| SQLite
@@ -52,6 +57,7 @@ Default addresses:
 
 | Component | Address | Purpose |
 | --- | --- | --- |
+| Streamlit | `http://localhost:8501` | Complete browser workspace |
 | FastAPI | `http://localhost:8000` | Ingestion, query, trace, and analytics API |
 | API documentation | `http://localhost:8000/docs` | Interactive OpenAPI interface |
 | Ollama | `http://localhost:11434` | Local chat and embedding models |
@@ -114,6 +120,11 @@ retrieval pass. `MAX_RETRIEVAL_ROUNDS` bounds the loop; the default is two.
 ## 4. Source code organization
 
 ```text
+frontend/
+  app.py                  Streamlit workspace and page rendering
+  api_client.py           typed FastAPI client and SSE parser
+  styles.py               visual theme helpers
+
 app/
   main.py                 FastAPI application and lifespan
   config.py               validated environment configuration
@@ -170,6 +181,11 @@ app/
 `container.py` builds services from explicit dependencies. Request handlers obtain a database
 session per request, while the application lifespan owns shared Ollama and Qdrant clients. This
 avoids scattering global HTTP clients and model configuration across modules.
+
+The Streamlit process is intentionally a client rather than a second implementation of the RAG
+pipeline. It calls FastAPI for every upload, query, delete, health, reindex, trace, and analytics
+operation. It never writes directly to OKF, Qdrant, or SQLite, so API lifecycle rules remain the
+single source of operational behavior.
 
 ## 5. Ingestion architecture
 
@@ -494,6 +510,7 @@ Expected checks:
 ```text
 [OK] .venv
 [OK] Python imports
+[OK] Streamlit UI
 [OK] Python packages
 [OK] Ollama
 [OK] gemma4:e4b
@@ -546,7 +563,20 @@ Expected top-level result:
 
 If the status is `degraded`, inspect the component whose status is not `ok` before ingesting.
 
-### Step 7: upload a document
+### Step 7: start the Streamlit UI
+
+Keep FastAPI running in terminal 1. In terminal 2:
+
+```powershell
+.\.venv\Scripts\python.exe -m streamlit run frontend/app.py `
+  --server.address 127.0.0.1 `
+  --server.port 8501
+```
+
+Open `http://127.0.0.1:8501`. The UI includes Ask, Library, Operations, Insights, and Diagnostics
+workspaces. The remaining command-line examples are still useful for automation and API diagnosis.
+
+### Step 8: upload a document
 
 Choose a supported document. The example below uses a PDF:
 
@@ -582,7 +612,7 @@ document ID is returned. List all registered documents:
 Invoke-RestMethod http://127.0.0.1:8000/api/documents | ConvertTo-Json -Depth 6
 ```
 
-### Step 8: ask a question and see the answer
+### Step 9: ask a question and see the answer
 
 ```powershell
 $QueryBody = @{
@@ -636,7 +666,7 @@ $Result.sources | Select-Object citation, source_file, heading, score, channels
 The answer text must cite only entries present in `sources`. If the indexed knowledge does not
 support the question, `no_answer` is `true` and the system returns a transparent refusal.
 
-### Step 9: ask a comparison
+### Step 10: ask a comparison
 
 After uploading two relevant documents:
 
@@ -660,7 +690,7 @@ $Comparison.comparison_targets
 The query type should be `comparison`, and retrieval runs independently for each target plus the
 combined comparison.
 
-### Step 10: ask a follow-up
+### Step 11: ask a follow-up
 
 Reuse the session ID so relevant history is available:
 
@@ -678,7 +708,7 @@ Invoke-RestMethod `
     -TimeoutSec 300 | ConvertTo-Json -Depth 10
 ```
 
-### Step 11: inspect the retrieval trace
+### Step 12: inspect the retrieval trace
 
 ```powershell
 $QueryId = $Result.query_id
@@ -698,7 +728,7 @@ Invoke-RestMethod http://127.0.0.1:8000/api/analytics/comparisons | ConvertTo-Js
 Invoke-RestMethod http://127.0.0.1:8000/api/stats | ConvertTo-Json -Depth 8
 ```
 
-### Step 12: delete a document when finished
+### Step 13: delete a document when finished
 
 ```powershell
 Invoke-RestMethod `
@@ -788,7 +818,7 @@ This replaces only the configured collection and regenerates it from OKF.
 Or run commands separately:
 
 ```powershell
-.\.venv\Scripts\python.exe -m ruff check app tests
+.\.venv\Scripts\python.exe -m ruff check app frontend tests
 .\.venv\Scripts\python.exe -m pytest -q
 .\.venv\Scripts\python.exe -m pip check
 ```

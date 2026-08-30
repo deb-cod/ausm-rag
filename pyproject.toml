@@ -27,12 +27,15 @@ dev = [
   "pytest-asyncio>=1.1,<2",
   "ruff>=0.12,<1",
 ]
+ui = [
+  "streamlit>=1.49,<2",
+]
 
 [project.scripts]
 smart-rag = "app.cli:main"
 
 [tool.hatch.build.targets.wheel]
-packages = ["app"]
+packages = ["app", "frontend"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

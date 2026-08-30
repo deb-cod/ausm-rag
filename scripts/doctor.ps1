@@ -23,6 +23,8 @@ Report-Check '.venv' (Test-Path -LiteralPath $Python) $Python
 if (Test-Path -LiteralPath $Python) {
     & $Python -c 'import app.main; print(app.main.app.title)' *> $null
     Report-Check 'Python imports' ($LASTEXITCODE -eq 0) 'FastAPI application imports successfully'
+    & $Python -c 'import streamlit; import frontend.api_client' *> $null
+    Report-Check 'Streamlit UI' ($LASTEXITCODE -eq 0) 'frontend and Streamlit import successfully'
     & $Python -m pip check *> $null
     Report-Check 'Python packages' ($LASTEXITCODE -eq 0) 'No broken requirements'
 }
@@ -69,7 +71,7 @@ try {
 Report-Check 'Qdrant' $QdrantReady 'http://localhost:6333'
 
 if ($RunTests -and (Test-Path -LiteralPath $Python)) {
-    & $Python -m ruff check app tests
+    & $Python -m ruff check app frontend tests
     Report-Check 'Ruff' ($LASTEXITCODE -eq 0) 'source and tests'
     & $Python -m pytest -q
     Report-Check 'Pytest' ($LASTEXITCODE -eq 0) 'test suite'
@@ -80,4 +82,3 @@ if ($Failures -gt 0) {
     exit 1
 }
 Write-Host 'All checks passed.' -ForegroundColor Green
-

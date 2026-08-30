@@ -21,7 +21,27 @@ setup, operations, troubleshooting, limitations, and all recent retrieval-qualit
 For every HTTP endpoint, request and response format, Swagger workflow, error case, and client
 example, see [api_documentation.md](api_documentation.md).
 
+For the ready-to-use browser interface and UI-specific setup notes, see
+[frontend/README.md](frontend/README.md).
+
 ## Requirements
+
+Python package versions are defined in `pyproject.toml`, which is the modern canonical dependency
+file for this project. Compatibility installers are also provided:
+
+- `requirements.txt` installs the application and Streamlit UI;
+- `requirements-dev.txt` additionally installs Pytest and Ruff for development.
+
+From a newly created and activated virtual environment, either command works:
+
+```powershell
+python -m pip install -r requirements.txt
+# Or, for development and running tests:
+python -m pip install -r requirements-dev.txt
+```
+
+The recommended Windows setup remains `scripts/setup.ps1`; it creates `.venv` and installs the full
+development environment automatically.
 
 For the default Windows setup, use:
 
@@ -95,6 +115,10 @@ app/
   llm/          central Ollama client, strict schemas, safe prompts
   rag/          orchestration state machine
   retrieval/    Qdrant index, sparse encoding, filters, RRF, reranking
+frontend/
+  app.py        Streamlit workspace
+  api_client.py FastAPI and SSE client
+  styles.py     visual theme
 data/
   sources/      original accepted uploads
   markdown/     original MarkItDown output
@@ -146,8 +170,8 @@ If models or Docker are managed separately, use:
 powershell -ExecutionPolicy Bypass -File .\scripts\doctor.ps1 -RunTests
 ```
 
-Every line should show `[OK]`. The doctor checks `.venv`, imports, dependency consistency, Ollama,
-both models, Docker, Qdrant, Ruff, and Pytest.
+Every line should show `[OK]`. The doctor checks `.venv`, FastAPI and Streamlit imports, dependency
+consistency, Ollama, both models, Docker, Qdrant, Ruff, and Pytest.
 
 ### 4. Start the API
 
@@ -160,6 +184,20 @@ Keep this terminal open. Then visit:
 - API documentation: `http://127.0.0.1:8000/docs`
 - health report: `http://127.0.0.1:8000/health`
 - Qdrant dashboard: `http://127.0.0.1:6333/dashboard`
+
+### 5. Start the browser UI
+
+Keep the API terminal running. Open another PowerShell terminal in the repository root:
+
+```powershell
+.\.venv\Scripts\python.exe -m streamlit run frontend/app.py `
+  --server.address 127.0.0.1 `
+  --server.port 8501
+```
+
+Open `http://127.0.0.1:8501`. The Streamlit UI supports chat and citations, multi-file upload,
+document deletion, health checks, OKF-to-Qdrant reindexing, analytics, query history, and retrieval
+traces. It calls the same FastAPI endpoints documented above.
 
 Verify all components in another terminal:
 
@@ -175,7 +213,7 @@ unreachable component.
 ```powershell
 py -3.12 -m venv .venv
 .\.venv\Scripts\python.exe -m pip install --upgrade pip
-.\.venv\Scripts\python.exe -m pip install -e ".[dev]"
+.\.venv\Scripts\python.exe -m pip install -r requirements-dev.txt
 Copy-Item .env.example .env
 
 ollama pull gemma4:e4b
@@ -198,19 +236,22 @@ instructions. Then run:
 python3.12 -m venv .venv
 . .venv/bin/activate
 python -m pip install --upgrade pip
-python -m pip install -e '.[dev]'
+python -m pip install -r requirements-dev.txt
 cp .env.example .env
 ollama pull gemma4:e4b
 ollama pull embeddinggemma
 docker compose up -d
-python -m uvicorn app.main:app --reload
 ```
+
+Then start `python -m uvicorn app.main:app --reload` and
+`python -m streamlit run frontend/app.py` in separate terminals.
 
 ### Service layout
 
-FastAPI and Ollama run on the host; only Qdrant runs in Docker:
+Streamlit, FastAPI, and Ollama run on the host; only Qdrant runs in Docker:
 
 ```text
+Streamlit http://localhost:8501
 FastAPI http://localhost:8000
 Ollama  http://localhost:11434
 Qdrant http://localhost:6333 (REST), localhost:6334 (gRPC)
@@ -327,7 +368,7 @@ not deleted.
 ## Tests and lint
 
 ```powershell
-.\.venv\Scripts\python.exe -m ruff check app tests
+.\.venv\Scripts\python.exe -m ruff check app frontend tests
 .\.venv\Scripts\python.exe -m pytest -q
 ```
 
@@ -375,7 +416,7 @@ subquestion-coverage, and no-answer audits.
 
 ```powershell
 git pull
-.\.venv\Scripts\python.exe -m pip install -e ".[dev]"
+.\.venv\Scripts\python.exe -m pip install -r requirements-dev.txt
 docker compose pull
 docker compose up -d
 .\scripts\doctor.ps1

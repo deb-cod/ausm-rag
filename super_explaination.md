@@ -48,6 +48,7 @@ The project components map to that library like this:
 | Library role | Project component | Plain meaning |
 |---|---|---|
 | Front desk | FastAPI | Receives uploads and questions over local web addresses |
+| Browser workspace | Streamlit | Friendly pages for chat, files, operations, analytics, and traces |
 | Interactive form | Swagger UI | Browser page where you can click buttons to use the API |
 | Safety clerk | Upload validator | Checks type, size, filename, and common file signatures |
 | Document reader | MarkItDown | Converts supported files into normalized Markdown text |
@@ -84,7 +85,9 @@ The current design is local-first:
 
 ```mermaid
 flowchart LR
-    Browser[Browser or PowerShell] -->|Upload and query| API[FastAPI on port 8000]
+    Browser[Browser] -->|buttons, forms, and chat| UI[Streamlit on port 8501]
+    PowerShell[PowerShell or another API client] -->|HTTP requests| API[FastAPI on port 8000]
+    UI -->|HTTP requests and SSE| API
     API --> SQLite[(SQLite under data/database)]
     API --> Files[(Sources, Markdown, OKF, cache)]
     API --> Ollama[Ollama on port 11434]
@@ -97,16 +100,19 @@ flowchart LR
 In ordinary language:
 
 - FastAPI runs directly on Windows from the project `.venv`.
+- Streamlit runs from the same `.venv` and provides the friendly browser workspace.
 - Ollama runs directly on Windows and uses local model files.
 - Qdrant runs inside Docker Desktop.
 - SQLite is one local database file.
 - Uploaded and generated files live under the project `data` directory.
-- Your browser communicates with FastAPI through `127.0.0.1`, which means this computer.
+- Your browser communicates with Streamlit, and Streamlit calls FastAPI through `127.0.0.1`, which
+  means this computer. Swagger can still call FastAPI directly.
 
 Default local addresses:
 
 | Service | Address | Purpose |
 |---|---|---|
+| Streamlit workspace | `http://127.0.0.1:8501` | Chat, files, operations, insights, and diagnostics |
 | Interactive API page | `http://127.0.0.1:8000/docs` | Clickable upload and query interface |
 | Health report | `http://127.0.0.1:8000/health` | Shows whether every dependency is available |
 | FastAPI | `http://127.0.0.1:8000` | Main application server |
@@ -822,6 +828,7 @@ The doctor checks:
 
 - `.venv` exists;
 - the application imports;
+- Streamlit and the frontend client import;
 - Python requirements are consistent;
 - Ollama is reachable;
 - both models are installed;
@@ -846,7 +853,21 @@ Open:
 http://127.0.0.1:8000/docs
 ```
 
-### 10.11 Confirm health
+### 10.11 Start the Streamlit browser workspace
+
+Keep FastAPI running and open another PowerShell terminal in the project directory:
+
+```powershell
+.\.venv\Scripts\python.exe -m streamlit run frontend/app.py `
+  --server.address 127.0.0.1 `
+  --server.port 8501
+```
+
+Open `http://127.0.0.1:8501`. Use **Library** to upload and manage files, **Ask** for grounded chat,
+**Operations** for health and reindexing, **Insights** for usage analytics, and **Diagnostics** for
+query plans and retrieval traces.
+
+### 10.12 Confirm health
 
 In the browser API page:
 
@@ -864,12 +885,21 @@ model.
 ```powershell
 py -3.12 -m venv .venv
 .\.venv\Scripts\python.exe -m pip install --upgrade pip
-.\.venv\Scripts\python.exe -m pip install -e ".[dev]"
+.\.venv\Scripts\python.exe -m pip install -r requirements-dev.txt
 Copy-Item .env.example .env
 ollama pull gemma4:e4b
 ollama pull embeddinggemma
 docker compose up -d
+```
+
+Then start FastAPI and Streamlit in two separate terminals:
+
+```powershell
 .\.venv\Scripts\python.exe -m uvicorn app.main:app --reload
+```
+
+```powershell
+.\.venv\Scripts\python.exe -m streamlit run frontend/app.py
 ```
 
 Activating `.venv` is optional because these commands call its Python executable directly.
@@ -885,13 +915,15 @@ cd ausm-rag
 python3.12 -m venv .venv
 . .venv/bin/activate
 python -m pip install --upgrade pip
-python -m pip install -e '.[dev]'
+python -m pip install -r requirements-dev.txt
 cp .env.example .env
 ollama pull gemma4:e4b
 ollama pull embeddinggemma
 docker compose up -d
-python -m uvicorn app.main:app --reload
 ```
+
+Then run `python -m uvicorn app.main:app --reload` and
+`python -m streamlit run frontend/app.py` in separate terminals.
 
 The PowerShell setup and doctor scripts are Windows-oriented.
 
@@ -1211,6 +1243,11 @@ Restart FastAPI after changing `.env`.
 ## 24. Source-code map
 
 ```text
+frontend/
+  app.py              browser workspace and all UI pages
+  api_client.py       FastAPI calls, upload handling, errors, and SSE parsing
+  styles.py           Streamlit visual theme
+
 app/
   main.py             creates FastAPI and startup/shutdown resources
   config.py           reads and validates .env settings
@@ -1360,7 +1397,14 @@ starting services, not uploading the file again.
 
 Tests now cover locator repair, rejected locator over-classification, flattened PDF headings,
 spacing-resistant sparse features, direct-clause ranking, antecedent extraction, citation cleanup,
-evidence sufficiency, and prior core behavior. The current suite contains 23 passing tests.
+evidence sufficiency, and prior core behavior.
+
+### Change 15: complete Streamlit browser workspace
+
+The new `frontend` folder adds a polished interface without bypassing FastAPI. It supports grounded
+chat, SSE answer display, citations, multi-file upload, safe document deletion, health checks,
+OKF-to-Qdrant reindexing, statistics, analytics, query history, and retrieval traces. The frontend
+client is covered by dedicated transport and SSE tests. The current suite contains 28 passing tests.
 
 ## 26. Troubleshooting decision tree
 
@@ -1471,7 +1515,7 @@ PPTX, XLSX, HTML, TXT, and Markdown ingestion does not require audio support.
 Run:
 
 ```powershell
-.\.venv\Scripts\python.exe -m ruff check app tests
+.\.venv\Scripts\python.exe -m ruff check app frontend tests
 .\.venv\Scripts\python.exe -m pytest -q
 ```
 
@@ -1499,7 +1543,7 @@ Stop FastAPI and run:
 
 ```powershell
 git pull
-.\.venv\Scripts\python.exe -m pip install -e ".[dev]"
+.\.venv\Scripts\python.exe -m pip install -r requirements-dev.txt
 docker compose pull
 docker compose up -d
 .\scripts\doctor.ps1
@@ -1608,7 +1652,7 @@ Rebuild without re-uploading:
 Test:
 
 ```powershell
-.\.venv\Scripts\python.exe -m ruff check app tests
+.\.venv\Scripts\python.exe -m ruff check app frontend tests
 .\.venv\Scripts\python.exe -m pytest -q
 ```
 
@@ -1645,4 +1689,3 @@ is lost, the backup becomes essential.
 
 That is the current architecture: local, inspectable, recoverable, evidence-first, and increasingly
 deterministic wherever deterministic code can answer more reliably than free-form generation.
-

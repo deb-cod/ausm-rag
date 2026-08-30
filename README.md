@@ -18,6 +18,9 @@ For the most detailed plain-English handbook—including the complete architectu
 setup, operations, troubleshooting, limitations, and all recent retrieval-quality changes—see
 [super_explaination.md](super_explaination.md).
 
+For every HTTP endpoint, request and response format, Swagger workflow, error case, and client
+example, see [api_documentation.md](api_documentation.md).
+
 ## Requirements
 
 For the default Windows setup, use:

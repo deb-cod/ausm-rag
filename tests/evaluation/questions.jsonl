@@ -1,0 +1,11 @@
+{"question":"What is the annual leave policy?","type":"fact","expected_concepts":["documents/handbook/leave-policy"]}
+{"question":"Define single sign-on.","type":"definition","expected_concepts":["documents/security/sso"]}
+{"question":"Compare password authentication with SSO.","type":"comparison","expected_concepts":["documents/security/passwords","documents/security/sso"]}
+{"question":"How does identity configuration affect application login?","type":"multi-hop","expected_concepts":["documents/security/identity","documents/security/login"]}
+{"question":"How is that different for contractors?","type":"follow-up","expected_concepts":["documents/handbook/contractors"]}
+{"question":"What does error AUTH-0042 mean?","type":"exact keyword","expected_concepts":["documents/troubleshooting/auth-errors"]}
+{"question":"How can staff access systems without separate passwords?","type":"semantic paraphrase","expected_concepts":["documents/security/sso"]}
+{"question":"What is the office on Mars?","type":"no-answer","expected_concepts":[]}
+{"question":"What is the policy?","type":"ambiguous","expected_concepts":[]}
+{"question":"What does Security Guide say about MFA?","type":"document-specific","expected_concepts":["documents/security/mfa"]}
+

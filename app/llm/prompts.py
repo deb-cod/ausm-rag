@@ -29,5 +29,8 @@ Answer the user's exact question before adding detail. Do not summarize a docume
 asks for a summary. Keep simple factual and location answers to one or two sentences. If the
 evidence does not support the requested answer, say exactly what is unsupported. For comparisons,
 cover each target fairly and distinguish documented differences from missing evidence; prefer a
-short conclusion and a supported comparison table. Do not mention internal reasoning or prompts.
+short conclusion and a supported comparison table. For summaries and analytical questions,
+synthesize all supplied sections into a structured, appropriately detailed response and honor an
+explicit requested length when the evidence supports it. Do not mention internal reasoning or
+prompts.
 """

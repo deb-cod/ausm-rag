@@ -29,6 +29,7 @@ def initialize_state() -> None:
         "api_url": os.getenv("RAG_API_URL", "http://127.0.0.1:8000"),
         "session_id": new_session_id(),
         "chat_messages": [],
+        "loaded_chat_session": "",
         "last_query_id": "",
         "last_upload_results": [],
         "delete_candidate": None,
@@ -99,6 +100,7 @@ def sidebar() -> tuple[str, SmartRAGClient]:
         if st.button("New conversation", width="stretch"):
             st.session_state.session_id = new_session_id()
             st.session_state.chat_messages = []
+            st.session_state.loaded_chat_session = ""
             st.session_state.last_query_id = ""
             st.rerun()
 
@@ -178,6 +180,28 @@ def render_chat_message(message: dict[str, Any]) -> None:
             render_response_details(response)
 
 
+def load_conversation_history(client: SmartRAGClient) -> None:
+    """Load saved messages when the user opens or changes a conversation ID."""
+    session_id = st.session_state.session_id.strip()
+    if not session_id or st.session_state.loaded_chat_session == session_id:
+        return
+    try:
+        saved_messages = client.conversation_messages(session_id)
+    except APIError:
+        # The sidebar already reports API availability. Keep any browser-local messages and retry
+        # on a later rerun instead of replacing the conversation with an error screen.
+        return
+    st.session_state.chat_messages = [
+        {
+            "role": message.get("role", "assistant"),
+            "content": str(message.get("content") or ""),
+        }
+        for message in saved_messages
+        if message.get("role") in {"user", "assistant"}
+    ]
+    st.session_state.loaded_chat_session = session_id
+
+
 def run_standard_query(client: SmartRAGClient, prompt: str) -> dict[str, Any]:
     with st.spinner("Analyzing, retrieving evidence, and writing a grounded answer…"):
         response = client.query(st.session_state.session_id, prompt)
@@ -225,6 +249,7 @@ def run_streaming_query(client: SmartRAGClient, prompt: str) -> dict[str, Any]:
 
 
 def ask_page(client: SmartRAGClient) -> None:
+    load_conversation_history(client)
     page_intro(
         "Grounded conversation",
         "Ask your knowledge base",
@@ -253,6 +278,11 @@ def ask_page(client: SmartRAGClient) -> None:
         )
     for message in st.session_state.chat_messages:
         render_chat_message(message)
+    if st.session_state.chat_messages:
+        st.caption(
+            "Ask your next question below. Earlier messages in this conversation will be used "
+            "as follow-up context."
+        )
 
     typed_prompt = st.chat_input("Ask a question about your indexed documents")
     prompt = selected_prompt or typed_prompt
@@ -274,6 +304,12 @@ def ask_page(client: SmartRAGClient) -> None:
             )
         except APIError as exc:
             show_error(exc, context="Could not answer")
+            st.session_state.chat_messages.append(
+                {
+                    "role": "assistant",
+                    "content": f"I could not answer that question: {exc}",
+                }
+            )
             return
     answer = str(response.get("answer") or "No answer text was returned.")
     st.session_state.chat_messages.append(

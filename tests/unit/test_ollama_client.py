@@ -47,17 +47,22 @@ async def test_embedding_batch_validation(tmp_path):
 @pytest.mark.asyncio
 async def test_chat_retries_an_empty_answer(tmp_path):
     calls = 0
+    payloads = []
 
-    async def handler(_request: httpx.Request) -> httpx.Response:
+    async def handler(request: httpx.Request) -> httpx.Response:
         nonlocal calls
         calls += 1
+        payloads.append(json.loads(request.content))
         content = "" if calls == 1 else "Grounded answer [1]"
         return httpx.Response(200, json={"message": {"content": content}})
 
     client = OllamaClient(Settings(data_dir=tmp_path), transport=httpx.MockTransport(handler))
     try:
-        answer = await client.chat([{"role": "user", "content": "Question"}])
+        answer = await client.chat(
+            [{"role": "user", "content": "Question"}], max_tokens=900
+        )
         assert answer == "Grounded answer [1]"
         assert calls == 2
+        assert all(payload["options"]["num_predict"] == 900 for payload in payloads)
     finally:
         await client.close()

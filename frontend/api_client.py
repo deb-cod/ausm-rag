@@ -98,6 +98,16 @@ class SmartRAGClient:
     def queries(self, limit: int = 100) -> list[dict[str, Any]]:
         return self._request("GET", "/api/queries", params={"limit": limit}, timeout=30)
 
+    def conversation_messages(
+        self, session_id: str, limit: int = 200
+    ) -> list[dict[str, Any]]:
+        return self._request(
+            "GET",
+            f"/api/sessions/{session_id}/messages",
+            params={"limit": limit},
+            timeout=30,
+        )
+
     def query_detail(self, query_id: str) -> dict[str, Any]:
         return self._request("GET", f"/api/queries/{query_id}", timeout=30)
 

@@ -332,6 +332,11 @@ Quoted or near-quoted factual fragments receive a direct compact-phrase boost. F
 the evidence. Simple factual generation uses a small set of query-centered evidence excerpts to
 prevent unrelated surrounding material from taking over the answer.
 
+Answer depth adapts to the request. Definitions and locator questions remain concise, while
+summaries, comparisons, how-to questions, and analytical requests receive structured detail.
+Explicit requests such as `in 500 words` receive a matching Ollama generation budget and are
+retried once when the first draft is far too short.
+
 `POST /api/query/stream` uses server-sent events: `query_analyzed`, `retrieving`, `generating`,
 `token`, `sources`, and `done`. Only operational status and answer text are exposed—not internal
 model reasoning.

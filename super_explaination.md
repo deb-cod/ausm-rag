@@ -498,9 +498,9 @@ contained several common words.
 
 ### 7.12 LLM reranking for complex questions
 
-Comparison, multi-hop, analytical, and synthesis questions may send the small candidate set to
-Gemma for relevance scores. Candidate text is treated as untrusted data and cannot change the
-reranking instructions.
+Comparison, summarization, multi-hop, analytical, and synthesis questions may send the small
+candidate set to Gemma for relevance scores. Candidate text is treated as untrusted data and cannot
+change the reranking instructions.
 
 ### 7.13 Trust and freshness
 
@@ -598,7 +598,27 @@ answer about dedicated bearers.
 The verified answer now explains that the Activate Default EPS Bearer Context Request begins default
 EPS bearer context activation and carries the bearer identity, APN, QoS, and allocated IP address.
 
-### 7.19 Citation validation
+### 7.19 Adaptive answer detail and requested length
+
+The answer writer does not use one writing style for every question:
+
+- a definition, fact, or location stays short and direct;
+- a how-to answer uses ordered steps, prerequisites, warnings, and expected results when supported;
+- a comparison gives both sides fair coverage;
+- an analytical question connects evidence and explains why it matters; and
+- a summary covers major themes, developments, and conclusions across several retrieved sections.
+
+For summaries, the retrieval planner searches not only the original question but also the document's
+introduction, purpose, main themes, conclusions, findings, and recommendations. This makes it less
+likely that one isolated paragraph will be presented as the entire book.
+
+If the user writes `in 500 words`, the system extracts `500`, gives Ollama enough output-token space,
+and asks for a result within roughly ten percent of that length. If the first answer is less than 60%
+of the explicit target, it receives one corrective rewrite request. The system still cannot invent
+material merely to reach a number: it must disclose when the retrieved evidence covers only part of
+the document.
+
+### 7.20 Citation validation
 
 Evidence is numbered `[1]`, `[2]`, and so on. The answer prompt allows only those numeric markers.
 The validator:
@@ -610,7 +630,7 @@ The validator:
 
 The API also returns the full source chunks, so a user can verify the answer directly.
 
-### 7.20 Saving the result
+### 7.21 Saving the result
 
 SQLite records:
 
@@ -1258,7 +1278,7 @@ app/
     health.py         health endpoint
     ingest.py         upload and rebuild endpoints
     documents.py      list and delete endpoints
-    query.py          normal/streaming query and trace endpoints
+    query.py          normal/streaming query, saved conversation, and trace endpoints
     analytics.py      stats and analytics endpoints
     schemas.py        request validation
 

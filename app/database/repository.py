@@ -3,7 +3,7 @@ from collections.abc import Sequence
 from datetime import datetime
 from typing import Any
 
-from sqlalchemy import delete, desc, func, select
+from sqlalchemy import delete, desc, func, literal_column, select
 from sqlalchemy.orm import Session
 
 from app.database.models import (
@@ -49,10 +49,16 @@ class Repository:
         stmt = (
             select(MessageRecord)
             .where(MessageRecord.session_id == session_id)
-            .order_by(desc(MessageRecord.created_at))
+            # SQLite may assign the same timestamp to messages flushed together. `rowid` keeps
+            # their insertion order deterministic without requiring a schema migration.
+            .order_by(desc(MessageRecord.created_at), desc(literal_column("messages.rowid")))
             .limit(limit)
         )
         return list(reversed(self.session.scalars(stmt).all()))
+
+    def conversation_messages(self, session_id: str, limit: int = 200) -> list[dict[str, Any]]:
+        """Return one conversation in display order for API and UI clients."""
+        return [_model_dict(record) for record in self.recent_messages(session_id, limit)]
 
     def document_by_hash(self, sha256: str) -> DocumentRecord | None:
         return self.session.scalar(select(DocumentRecord).where(DocumentRecord.sha256 == sha256))

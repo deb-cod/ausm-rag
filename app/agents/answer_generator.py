@@ -14,6 +14,7 @@ from app.utils.text import (
 NO_ANSWER = (
     "I don't have enough supported information in the indexed knowledge base to answer that."
 )
+WORD_COUNT_RE = re.compile(r"\b(\d{2,5})\s*(?:-|\s)?\s*words?\b", re.IGNORECASE)
 
 
 class AnswerGenerator:
@@ -32,30 +33,124 @@ class AnswerGenerator:
         if clause_answer:
             return clause_answer
         selected_evidence = self._select_evidence(plan, evidence)
+        excerpt_limit = 4000 if plan.query_type.value == "summarization" else 2800
         evidence_text = "\n\n".join(
             f"[{number}] Source: {item.source_file}; heading: {item.heading or item.title}\n"
             f"Trust: {item.trust_tier}; status: {item.status or 'unspecified'}; "
             f"stale: {item.is_stale}\n"
-            f"{self._focused_excerpt(plan, item.content)}"
+            f"{self._focused_excerpt(plan, item.content, limit=excerpt_limit)}"
             for number, item in enumerate(selected_evidence, 1)
         )
+        target_words = self.requested_word_count(plan.original_query)
+        generation_words = target_words or self.default_word_count(plan)
+        answer_instructions = self.answer_instructions(plan, target_words)
         prompt = (
             f"Question: {plan.original_query}\nStandalone question: {plan.standalone_query}\n\n"
             f"Query type: {plan.query_type.value}\n"
             f"Comparison targets: {plan.comparison_targets}\n"
             f"Comparison dimensions: {plan.comparison_dimensions}\n\n"
             f"Evidence:\n{evidence_text}\n\n"
-            "Answer only the exact question from this evidence. Prefer the passage that most "
-            "directly matches the wording. Give the direct answer in the first sentence, omit "
-            "unrelated background, and include numeric citations for supported claims."
+            f"Response requirements:\n{answer_instructions}\n"
+            "Use only the evidence above. Include numeric citations for supported claims."
         )
         answer = await self.client.chat(
             [
                 {"role": "system", "content": ANSWER_SYSTEM},
                 {"role": "user", "content": prompt},
-            ]
+            ],
+            max_tokens=self.generation_token_budget(generation_words),
         )
+        if target_words and self.word_count(answer) < target_words * 0.6:
+            answer = await self.client.chat(
+                [
+                    {"role": "system", "content": ANSWER_SYSTEM},
+                    {"role": "user", "content": prompt},
+                    {"role": "assistant", "content": answer},
+                    {
+                        "role": "user",
+                        "content": (
+                            f"The draft is only {self.word_count(answer)} words and does not "
+                            f"satisfy the requested approximately {target_words}-word response. "
+                            "Rewrite it as a complete, evidence-grounded answer. Cover distinct "
+                            "major points rather than repeating one detail, and retain citations."
+                        ),
+                    },
+                ],
+                max_tokens=self.generation_token_budget(target_words),
+            )
         return self.validate_citations(answer, len(selected_evidence))
+
+    @staticmethod
+    def requested_word_count(query: str) -> int | None:
+        match = WORD_COUNT_RE.search(query)
+        if not match:
+            return None
+        return min(2000, max(50, int(match.group(1))))
+
+    @staticmethod
+    def default_word_count(plan: QueryPlan) -> int | None:
+        defaults = {
+            "summarization": 400,
+            "comparison": 350,
+            "analytical": 400,
+            "synthesis": 400,
+            "multi_hop": 350,
+            "exploratory": 350,
+            "how_to": 250,
+        }
+        return defaults.get(plan.query_type.value)
+
+    @staticmethod
+    def generation_token_budget(target_words: int | None) -> int | None:
+        if target_words is None:
+            return None
+        return min(4096, max(512, int(target_words * 1.8)))
+
+    @staticmethod
+    def word_count(text: str) -> int:
+        return len(re.findall(r"\b[\w'-]+\b", text))
+
+    @staticmethod
+    def answer_instructions(plan: QueryPlan, target_words: int | None) -> str:
+        query_type = plan.query_type.value
+        if query_type == "summarization":
+            length = (
+                f"Aim for approximately {target_words} words (within about 10% when the evidence "
+                "supports that length)."
+                if target_words
+                else "Provide a substantive overview of roughly 300-500 words."
+            )
+            return " ".join(
+                (
+                    length,
+                    "Synthesize the document's purpose, major themes, important developments, "
+                    "and conclusions across the supplied sections.",
+                    "Use a short opening overview followed by clear thematic paragraphs or "
+                    "headings; do not mistake one isolated passage for the whole document.",
+                    "If the supplied evidence covers only part of the document, state that "
+                    "limitation instead of pretending the summary is complete.",
+                )
+            )
+        if query_type == "comparison":
+            return (
+                "Give a balanced, descriptive comparison. Start with a short conclusion, then "
+                "compare each requested target across the supported dimensions, preferably in a "
+                "compact table, and clearly identify missing evidence."
+            )
+        if query_type in {"analytical", "synthesis", "multi_hop", "exploratory"}:
+            return (
+                "Develop a structured explanation that connects the relevant evidence, explains "
+                "why the points matter, and states any evidence limitations."
+            )
+        if query_type == "how_to":
+            return (
+                "Give a practical step-by-step explanation, including prerequisites, important "
+                "warnings, and the expected result when those details are supported."
+            )
+        return (
+            "Answer the exact question directly. Keep a simple factual, definition, or location "
+            "answer concise, but include enough surrounding explanation to make it understandable."
+        )
 
     @staticmethod
     def _select_evidence(plan: QueryPlan, evidence: list[SearchResult]) -> list[SearchResult]:

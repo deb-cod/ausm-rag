@@ -410,6 +410,13 @@ begins with `which`, `that`, or `who` takes a deterministic path when the matchi
 the system extracts the immediately preceding subject and cites that exact passage. For example,
 `which indicates whether the mobile supports IPv4, IPv6 or both` resolves to `PDN type`.
 
+Generation depth is query-aware. Factual and locator answers remain short; summaries retrieve
+introduction/theme/conclusion evidence and request a structured synthesis; comparisons, how-to, and
+analytical questions receive type-specific organization. A requested word count is parsed from the
+question, translated into an Ollama `num_predict` budget, and checked after generation. If an
+explicitly requested long answer is less than 60% of its target, one corrective rewrite is allowed.
+This length control never authorizes unsupported filler: partial evidence must be disclosed.
+
 Ollama thinking output is disabled for structured operations and user-visible answers. Only final
 answer content is accepted. Empty generations are retried once and then returned as a clear service
 error instead of a blank answer.
@@ -751,6 +758,7 @@ artifacts, and Qdrant points.
 | POST | `/api/query/stream` | Return operational and answer events over SSE |
 | POST | `/api/reindex` | Recreate Qdrant from OKF through the API |
 | GET | `/api/queries` | List recent structured queries |
+| GET | `/api/sessions/{session_id}/messages` | Load saved user and assistant messages for a conversation |
 | GET | `/api/queries/{query_id}` | Inspect one query and its sources |
 | GET | `/api/trace/{query_id}` | Inspect its query plan and retrieval runs |
 | GET | `/api/analytics/questions` | Common questions, types, and low-confidence queries |

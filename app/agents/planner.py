@@ -41,6 +41,18 @@ class RetrievalPlanner:
                 f"{target} {dimensions}".strip() for target in plan.comparison_targets
             ]
             return (target_queries + [plan.standalone_query])[: self.max_subqueries]
+        if plan.query_type == QueryType.SUMMARIZATION:
+            # A generic summary query is too weak to represent a whole document. These additional
+            # searches deliberately seek its structure, major ideas, and ending.
+            return list(
+                dict.fromkeys(
+                    [
+                        plan.standalone_query,
+                        "document introduction purpose main themes key ideas",
+                        "document conclusions findings outcomes recommendations",
+                    ]
+                )
+            )[: self.max_subqueries]
         if plan.requires_decomposition and plan.subquestions:
             return plan.subquestions[: self.max_subqueries]
         return [plan.standalone_query]

@@ -43,6 +43,26 @@ def test_query_analytics_stores_structured_plan():
         assert detail["comparison_targets"] == ["A", "B"]
 
 
+def test_conversation_messages_are_returned_in_display_order():
+    engine = create_engine("sqlite:///:memory:")
+    Base.metadata.create_all(engine)
+    with Session(engine) as session:
+        repository = Repository(session)
+        repository.add_message("conversation", "user", "First question")
+        repository.add_message("conversation", "assistant", "First answer")
+        repository.add_message("conversation", "user", "Follow-up question")
+        session.commit()
+
+        messages = repository.conversation_messages("conversation")
+
+        assert [(message["role"], message["content"]) for message in messages] == [
+            ("user", "First question"),
+            ("assistant", "First answer"),
+            ("user", "Follow-up question"),
+        ]
+    engine.dispose()
+
+
 def test_retrieval_run_respects_sqlite_foreign_keys(tmp_path):
     settings = Settings(
         data_dir=tmp_path,

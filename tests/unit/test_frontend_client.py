@@ -16,6 +16,10 @@ def test_client_covers_health_documents_query_and_analytics():
             "/api/documents": [],
             "/api/query": {"query_id": "q1", "answer": "Grounded answer"},
             "/api/queries": [],
+            "/api/sessions/session_1/messages": [
+                {"role": "user", "content": "Question?"},
+                {"role": "assistant", "content": "Grounded answer"},
+            ],
             "/api/queries/q1": {"id": "q1"},
             "/api/trace/q1": {"query_id": "q1"},
             "/api/analytics/questions": {"most_common": []},
@@ -32,6 +36,7 @@ def test_client_covers_health_documents_query_and_analytics():
     assert client.documents() == []
     assert client.query("session_1", "Question?")["query_id"] == "q1"
     assert client.queries(10) == []
+    assert len(client.conversation_messages("session_1")) == 2
     assert client.query_detail("q1")["id"] == "q1"
     assert client.trace("q1")["query_id"] == "q1"
     assert client.question_analytics(5)["most_common"] == []

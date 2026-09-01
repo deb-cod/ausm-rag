@@ -2,7 +2,7 @@ import asyncio
 import json
 from typing import Annotated, Any
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Path, Query
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
@@ -66,6 +66,23 @@ def queries(
     limit: Annotated[int, Query(ge=1, le=500)] = 100, db: Session = Depends(get_db)
 ) -> list[dict[str, Any]]:
     return Repository(db).list_queries(limit)
+
+
+@router.get("/sessions/{session_id}/messages")
+def conversation_messages(
+    session_id: Annotated[
+        str,
+        Path(
+            min_length=1,
+            max_length=128,
+            pattern=r"^[A-Za-z0-9_-]+$",
+            description="Conversation ID used when the questions were submitted.",
+        ),
+    ],
+    limit: Annotated[int, Query(ge=1, le=500)] = 200,
+    db: Session = Depends(get_db),
+) -> list[dict[str, Any]]:
+    return Repository(db).conversation_messages(session_id, limit)
 
 
 @router.get("/queries/{query_id}")

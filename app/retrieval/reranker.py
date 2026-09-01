@@ -29,6 +29,7 @@ class AdaptiveReranker:
             QueryType.MULTI_HOP,
             QueryType.ANALYTICAL,
             QueryType.SYNTHESIS,
+            QueryType.SUMMARIZATION,
         }:
             try:
                 ranked = await self._llm_rerank(query, candidates)

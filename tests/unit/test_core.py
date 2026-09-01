@@ -23,6 +23,17 @@ class FailingClient:
         raise RuntimeError("not used")
 
 
+class DraftingClient:
+    def __init__(self):
+        self.calls = []
+
+    async def chat(self, messages, **kwargs):
+        self.calls.append((messages, kwargs))
+        if len(self.calls) == 1:
+            return "A very short summary [1]."
+        return " ".join(["Supported"] * 450) + " [1]."
+
+
 def concept(tmp_path: Path, body: str) -> OKFConcept:
     return OKFConcept(
         concept_id="documents/test/topic",
@@ -123,6 +134,55 @@ def test_retrieval_plan_and_citation_validation(tmp_path: Path):
         "Supported [1] [2]."
     )
     assert "[Preface]" not in AnswerGenerator.validate_citations("Supported [Preface].", 2)
+
+
+def test_explicit_summary_request_is_repaired_and_broadly_planned(tmp_path: Path):
+    analyzer = QueryAnalyzer(FailingClient(), tmp_path, 6)  # type: ignore[arg-type]
+    query = "Provide the whole summary of the book in 500 words"
+    unreliable_plan = QueryPlan(
+        original_query=query,
+        standalone_query=query,
+        query_type=QueryType.FACTUAL,
+    )
+
+    repaired = analyzer._repair(unreliable_plan, query)
+    retrieval = RetrievalPlanner(6).build(repaired)
+
+    assert repaired.query_type == QueryType.SUMMARIZATION
+    assert len(retrieval.queries) == 3
+    assert any("main themes" in item for item in retrieval.queries)
+
+
+@pytest.mark.asyncio
+async def test_summary_honors_requested_length_with_corrective_retry():
+    client = DraftingClient()
+    generator = AnswerGenerator(client)  # type: ignore[arg-type]
+    query = "Provide the whole summary of the book in 500 words"
+    plan = QueryPlan(
+        original_query=query,
+        standalone_query=query,
+        query_type=QueryType.SUMMARIZATION,
+    )
+    evidence = [
+        SearchResult(
+            chunk_id="summary-source",
+            document_id="doc",
+            concept_id="concept",
+            content="The document introduces its purpose, develops its main themes, and concludes.",
+            title="Book",
+            source_file="book.pdf",
+            source_sha256="abc",
+            okf_type="Reference",
+            score=0.9,
+        )
+    ]
+
+    answer = await generator.generate(plan, evidence, sufficient=True)
+
+    assert len(client.calls) == 2
+    assert client.calls[0][1]["max_tokens"] == 900
+    assert "approximately 500 words" in client.calls[0][0][1]["content"]
+    assert generator.word_count(answer) >= 400
 
 
 def test_locator_query_is_repaired_and_planned_as_exact_lookup(tmp_path: Path):

@@ -16,6 +16,7 @@ FOLLOWUP_RE = re.compile(r"\b(it|that|this|those|they|them|former|latter|above)\
 FOLLOWUP_COMPARE_RE = re.compile(
     r"\bcompare\s+(?:it|that|this)?\s*(?:with|to)\s+(.+?)[?.!]*$", re.I
 )
+SUMMARY_RE = re.compile(r"\b(summar(?:y|ize|ise)|overview|synopsis|recap)\b", re.I)
 QUESTION_OPENERS = {
     "compare",
     "define",
@@ -84,6 +85,11 @@ class QueryAnalyzer:
             plan.exact_terms = list(dict.fromkeys([target, *plan.exact_terms]))
             plan.subquestions = []
             plan.requires_decomposition = False
+        elif SUMMARY_RE.search(query):
+            # Do not let a small structured-output model turn an explicit summary request into a
+            # one-passage factual lookup.
+            plan.query_type = QueryType.SUMMARIZATION
+            plan.retrieval_strategy = "standard"
         elif plan.query_type == QueryType.LOCATOR or plan.retrieval_strategy == "locator":
             # A small model can over-apply a recently described query type. Locator mode is
             # allowed only when deterministic syntax identifies a requested location.

@@ -57,9 +57,13 @@ class OllamaClient:
         *,
         temperature: float = 0.1,
         model: str | None = None,
+        max_tokens: int | None = None,
     ) -> str:
         payload_messages = list(messages)
         for attempt in range(2):
+            options: dict[str, float | int] = {"temperature": temperature}
+            if max_tokens is not None:
+                options["num_predict"] = max_tokens
             response = await self._post(
                 "/api/chat",
                 {
@@ -67,7 +71,7 @@ class OllamaClient:
                     "messages": payload_messages,
                     "think": False,
                     "stream": False,
-                    "options": {"temperature": temperature},
+                    "options": options,
                 },
             )
             try:

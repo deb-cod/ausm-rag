@@ -162,6 +162,7 @@ An HTTP `200` query response does not necessarily mean the system found an answe
 | `POST` | `/api/query` | Ask a question and receive one JSON response | `200` |
 | `POST` | `/api/query/stream` | Ask a question using server-sent events | `200` |
 | `GET` | `/api/queries` | List recent query records | `200` |
+| `GET` | `/api/sessions/{session_id}/messages` | Load one saved conversation in display order | `200` |
 | `GET` | `/api/queries/{query_id}` | Get one saved query and its cited source records | `200` |
 | `GET` | `/api/trace/{query_id}` | Inspect the saved query plan and retrieval rounds | `200` |
 | `GET` | `/api/analytics/questions` | Show common, typed, and low-confidence questions | `200` |
@@ -881,10 +882,48 @@ Invoke-RestMethod "http://127.0.0.1:8000/api/queries?limit=20" |
 ]
 ```
 
-There is currently no offset, cursor, date filter, session filter, or deletion endpoint for query
-history.
+There is currently no offset, cursor, date filter, or deletion endpoint for query history. To load
+the user and assistant messages for one session, use the conversation endpoint below.
 
-### 10.2 `GET /api/queries/{query_id}`
+### 10.2 `GET /api/sessions/{session_id}/messages`
+
+Returns the saved user and assistant messages for one conversation in oldest-first display order.
+The Streamlit Ask page uses this endpoint when a conversation ID is opened or changed, allowing
+follow-up questions and answers to remain visible after navigating away from the page.
+
+The session ID may contain only letters, numbers, `-`, and `_`. The optional `limit` query
+parameter defaults to `200` and accepts values from `1` through `500`.
+
+```powershell
+$sessionId = "my_first_test"
+Invoke-RestMethod "http://127.0.0.1:8000/api/sessions/$sessionId/messages?limit=200" |
+  ConvertTo-Json -Depth 6
+```
+
+#### Example response
+
+```json
+[
+  {
+    "id": "message-id-1",
+    "session_id": "my_first_test",
+    "role": "user",
+    "content": "What is LTE?",
+    "created_at": "2026-08-30T11:39:10.000000"
+  },
+  {
+    "id": "message-id-2",
+    "session_id": "my_first_test",
+    "role": "assistant",
+    "content": "LTE is ... [1].",
+    "created_at": "2026-08-30T11:39:19.000000"
+  }
+]
+```
+
+An unknown session returns an empty list. An invalid session ID returns HTTP `422`.
+
+### 10.3 `GET /api/queries/{query_id}`
 
 Returns one saved query and the compact citation records stored for it.
 
@@ -937,7 +976,7 @@ Unknown query IDs return HTTP `404`:
 }
 ```
 
-### 10.3 `GET /api/trace/{query_id}`
+### 10.4 `GET /api/trace/{query_id}`
 
 Returns the saved analysis plan, retrieval plan, and retrieval-run metrics for one query.
 

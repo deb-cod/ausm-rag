@@ -31,7 +31,12 @@ def apply_styles() -> None:
             border-radius: .65rem;
             padding: .35rem .5rem;
         }
-        .block-container { max-width: 1180px; padding-top: 2.2rem; padding-bottom: 4rem; }
+        [data-testid="stMainBlockContainer"],
+        .block-container {
+            max-width: 1180px;
+            padding-top: 4.5rem !important;
+            padding-bottom: 4rem;
+        }
         h1, h2, h3 { color: var(--rag-ink); letter-spacing: -.025em; }
         .rag-eyebrow {
             color: var(--rag-accent);

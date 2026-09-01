@@ -1,4 +1,5 @@
-# Complete local-development environment: application, Streamlit UI, tests, and Ruff.
-# The canonical dependency definitions are in pyproject.toml.
--e .[dev,ui]
-
+# Runtime and Streamlit packages, followed by exact development-tool versions.
+-r requirements.txt
+pytest==8.4.2
+pytest-asyncio==1.4.0
+ruff==0.16.5

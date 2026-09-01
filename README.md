@@ -26,11 +26,15 @@ For the ready-to-use browser interface and UI-specific setup notes, see
 
 ## Requirements
 
-Python package versions are defined in `pyproject.toml`, which is the modern canonical dependency
-file for this project. Compatibility installers are also provided:
+The project supplies exact, tested package versions so pip does not explore broad version ranges:
 
-- `requirements.txt` installs the application and Streamlit UI;
-- `requirements-dev.txt` additionally installs Pytest and Ruff for development.
+- `requirements.txt` installs the application, supported document converters, and Streamlit UI;
+- `requirements-dev.txt` includes that file and additionally installs Pytest and Ruff;
+- `pyproject.toml` mirrors the same direct versions for editable/package installation.
+
+MarkItDown is installed only with `docx`, `pdf`, `pptx`, and `xlsx` extras. HTML, plain text, and
+Markdown work through its base installation. Unused Azure, audio, Outlook, and YouTube integrations
+are intentionally not installed.
 
 From a newly created and activated virtual environment, either command works:
 

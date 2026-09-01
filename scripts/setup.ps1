@@ -45,7 +45,8 @@ if (-not (Test-Path -LiteralPath $VenvPython)) {
 
 Write-Host 'Installing Python dependencies...'
 & $VenvPython -m pip install --upgrade pip
-& $VenvPython -m pip install -r requirements-dev.txt
+Write-Host 'The first install downloads local document, AI support, and UI wheels; later runs use pip cache.'
+& $VenvPython -m pip install --prefer-binary -r requirements-dev.txt
 & $VenvPython -m pip check
 
 if (-not (Test-Path -LiteralPath '.env')) {

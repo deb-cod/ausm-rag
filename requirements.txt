@@ -1,4 +1,13 @@
-# Compatibility installer for users and deployment tools that expect requirements.txt.
-# Dependency versions remain defined once, in pyproject.toml. This installs the application and UI.
--e .[ui]
-
+# Exact versions tested by this project. Only document formats accepted by the API are installed;
+# Azure, audio-transcription, Outlook, and YouTube MarkItDown extras are intentionally excluded.
+fastapi==0.141.1
+httpx==0.28.1
+markitdown[docx,pdf,pptx,xlsx]==0.1.7
+pydantic-settings==2.15.0
+python-frontmatter==1.3.0
+python-multipart==0.0.32
+qdrant-client==1.19.0
+sqlalchemy==2.0.52
+streamlit==1.62.0
+structlog==25.5.0
+uvicorn[standard]==0.52.4

@@ -29,18 +29,56 @@ function Find-Executable {
 Write-Host '== AUSM Smart RAG setup ==' -ForegroundColor Cyan
 
 $PyLauncher = Find-Executable -Name 'py.exe'
-if (-not $PyLauncher) {
-    throw 'Python launcher not found. Install 64-bit Python 3.12, reopen PowerShell, and rerun.'
+$Python312 = $null
+$PythonPrefix = @()
+
+if ($PyLauncher) {
+    $LauncherVersion = (& $PyLauncher -3.12 -c `
+        'import sys; print(sys.version_info.major, sys.version_info.minor, sep=chr(46))' 2>$null |
+        Out-String).Trim()
+    if ($LASTEXITCODE -eq 0 -and $LauncherVersion -eq '3.12') {
+        $Python312 = $PyLauncher
+        $PythonPrefix = @('-3.12')
+    }
 }
-& $PyLauncher -3.12 --version
-if ($LASTEXITCODE -ne 0) {
-    throw 'Python 3.12 is required. Install it with the Windows py launcher enabled.'
+
+if (-not $Python312) {
+    $PythonCandidates = @()
+    $PathPython = Get-Command python.exe -ErrorAction SilentlyContinue
+    if ($PathPython) {
+        $PythonCandidates += $PathPython.Source
+    }
+    $PythonCandidates += @(
+        (Join-Path $env:LOCALAPPDATA 'Programs\Python\Python312\python.exe'),
+        (Join-Path $env:ProgramFiles 'Python312\python.exe')
+    )
+    foreach ($Candidate in ($PythonCandidates | Select-Object -Unique)) {
+        if (-not $Candidate -or -not (Test-Path -LiteralPath $Candidate)) {
+            continue
+        }
+        $DirectVersion = (& $Candidate -c `
+            'import sys; print(sys.version_info.major, sys.version_info.minor, sep=chr(46))' 2>$null |
+            Out-String).Trim()
+        if ($LASTEXITCODE -eq 0 -and $DirectVersion -eq '3.12') {
+            $Python312 = $Candidate
+            break
+        }
+    }
 }
+
+if (-not $Python312) {
+    throw @'
+Python 3.12 was not found. Python 3.10 is not sufficient for this project.
+Install 64-bit Python 3.12, enable "Add python.exe to PATH" when offered, close and reopen
+PowerShell, then rerun setup. Python 3.10 can remain installed beside Python 3.12.
+'@
+}
+& $Python312 @PythonPrefix --version
 
 $VenvPython = Join-Path $ProjectRoot '.venv\Scripts\python.exe'
 if (-not (Test-Path -LiteralPath $VenvPython)) {
     Write-Host 'Creating .venv...'
-    & $PyLauncher -3.12 -m venv .venv
+    & $Python312 @PythonPrefix -m venv .venv
 }
 
 Write-Host 'Installing Python dependencies...'

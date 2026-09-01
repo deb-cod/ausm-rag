@@ -845,7 +845,7 @@ Then use the failing component:
 
 | Failure | Checks and fix |
 | --- | --- |
-| Python or `.venv` | Run `py -3.12 --version`, then rerun `setup.ps1` |
+| Python or `.venv` | Run `py -3.12 --version` or `python --version`, then rerun `setup.ps1` |
 | Docker command missing | Open a new terminal or add Docker's standard bin directory to PATH |
 | Docker engine missing | Start Docker Desktop; verify `docker info` |
 | Qdrant unhealthy | Run `docker compose ps` and `docker compose logs qdrant` |

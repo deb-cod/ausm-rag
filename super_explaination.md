@@ -783,7 +783,7 @@ powershell -ExecutionPolicy Bypass -File .\scripts\setup.ps1
 
 The script:
 
-1. checks for Python 3.12;
+1. checks for Python 3.12 through either the Windows launcher or a direct installation;
 2. creates `.venv` if missing;
 3. upgrades pip;
 4. installs the project and developer tools;

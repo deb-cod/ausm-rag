@@ -50,7 +50,7 @@ development environment automatically.
 For the default Windows setup, use:
 
 - Windows 10/11 64-bit with virtualization/WSL 2 enabled for Docker Desktop;
-- 64-bit Python 3.12 with the `py` launcher;
+- 64-bit Python 3.12, available through either the `py` launcher or `python.exe` on PATH;
 - Git;
 - Docker Desktop with the Linux container engine running;
 - Ollama running on the host;
@@ -407,8 +407,11 @@ subquestion-coverage, and no-answer audits.
 - **Generation model missing:** run `ollama pull gemma4:e4b`, or set `OLLAMA_LLM_MODEL` in `.env` to
   another locally installed model that supports chat and structured JSON.
 - **Ollama unavailable:** start Ollama and check `http://localhost:11434/api/tags`.
-- **Python is not found:** reinstall Python 3.12 with the launcher and PATH options enabled, restart
-  PowerShell, and check `py -3.12 --version`.
+- **`py` is not found:** this means the optional Windows launcher is unavailable. Check
+  `python --version`; the setup script now accepts a direct Python 3.12 installation on PATH or in
+  its standard per-user location.
+- **Only Python 3.10 is found:** install 64-bit Python 3.12 beside it, enable the PATH option, close
+  and reopen PowerShell, and then rerun `setup.ps1`. Python 3.10 does not need to be removed.
 - **PowerShell blocks scripts:** use `powershell -ExecutionPolicy Bypass -File .\scripts\setup.ps1`.
 - **Dimension changed:** run `python -m app.cli rebuild-index`.
 - **Conversion failure:** confirm the extension/signature and that the source is not encrypted or

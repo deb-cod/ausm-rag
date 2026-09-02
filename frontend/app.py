@@ -26,7 +26,7 @@ EXAMPLE_QUESTIONS = (
 
 def initialize_state() -> None:
     defaults: dict[str, Any] = {
-        "api_url": os.getenv("RAG_API_URL", "http://127.0.0.1:8000"),
+        "api_url": os.getenv("RAG_API_URL", "http://localhost:8000"),
         "session_id": new_session_id(),
         "chat_messages": [],
         "loaded_chat_session": "",
@@ -38,6 +38,10 @@ def initialize_state() -> None:
     for key, value in defaults.items():
         if key not in st.session_state:
             st.session_state[key] = value
+    # Transparently move browser sessions created with the previous local default. An explicit
+    # non-default URL (for example a LAN address) is left untouched.
+    if st.session_state.api_url == "http://127.0.0.1:8000":
+        st.session_state.api_url = "http://localhost:8000"
 
 
 def new_session_id() -> str:
@@ -73,8 +77,8 @@ def sidebar() -> tuple[str, SmartRAGClient]:
             key="api_url",
             help="The Streamlit server calls this URL. No browser CORS setup is required.",
         )
-        base_url = st.session_state.api_url.strip().rstrip("/")
-        client = SmartRAGClient(base_url)
+        client = SmartRAGClient(st.session_state.api_url)
+        base_url = client.base_url
 
         try:
             health = cached_health(base_url)

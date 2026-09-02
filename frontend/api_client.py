@@ -29,7 +29,10 @@ class SmartRAGClient:
         timeout: float = 300,
         transport: httpx.BaseTransport | None = None,
     ) -> None:
-        self.base_url = base_url.strip().rstrip("/")
+        normalized_url = base_url.strip().rstrip("/")
+        if normalized_url and not normalized_url.casefold().startswith(("http://", "https://")):
+            normalized_url = f"http://{normalized_url}"
+        self.base_url = normalized_url
         self.timeout = timeout
         self.transport = transport
 

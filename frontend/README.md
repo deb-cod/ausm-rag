@@ -55,7 +55,7 @@ python -m streamlit run frontend/app.py --server.address 127.0.0.1 --server.port
 
 ## Use another API address
 
-The default API URL is `http://127.0.0.1:8000`. It can be changed in the UI sidebar or supplied when
+The default API URL is `http://localhost:8000`. It can be changed in the UI sidebar or supplied when
 Streamlit starts:
 
 ```powershell
@@ -70,7 +70,7 @@ $env:RAG_API_URL = "http://192.168.1.20:8000"
 ```text
 Browser
   -> Streamlit at 127.0.0.1:8501
-      -> FastAPI at 127.0.0.1:8000
+      -> FastAPI at localhost:8000
           -> Ollama
           -> Qdrant
           -> SQLite
@@ -82,7 +82,7 @@ a separate-browser-origin CORS configuration is not needed for this UI.
 
 ## Troubleshooting
 
-- **UI says API is offline:** start Uvicorn and verify `http://127.0.0.1:8000/health`.
+- **UI says API is offline:** start Uvicorn and verify `http://localhost:8000/health`.
 - **Services are degraded:** open Operations and inspect each health component.
 - **Upload takes time:** initial document embeddings may need to be calculated locally.
 - **Question takes time:** Ollama may be loading a model; watch the API and Ollama terminals.

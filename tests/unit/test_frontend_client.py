@@ -102,3 +102,14 @@ def test_client_reports_connection_failures_without_internal_exception_text():
     client = SmartRAGClient("http://test", transport=httpx.MockTransport(handler))
     with pytest.raises(APIError, match="Could not communicate with FastAPI"):
         client.health()
+
+
+def test_client_adds_http_scheme_to_local_api_address():
+    def handler(request: httpx.Request) -> httpx.Response:
+        assert str(request.url) == "http://localhost:8000/health"
+        return httpx.Response(200, json={"status": "ok"})
+
+    client = SmartRAGClient("localhost:8000", transport=httpx.MockTransport(handler))
+
+    assert client.base_url == "http://localhost:8000"
+    assert client.health()["status"] == "ok"

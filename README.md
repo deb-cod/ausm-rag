@@ -185,8 +185,8 @@ consistency, Ollama, both models, Docker, Qdrant, Ruff, and Pytest.
 
 Keep this terminal open. Then visit:
 
-- API documentation: `http://127.0.0.1:8000/docs`
-- health report: `http://127.0.0.1:8000/health`
+- API documentation: `http://localhost:8000/docs`
+- health report: `http://localhost:8000/health`
 - Qdrant dashboard: `http://127.0.0.1:6333/dashboard`
 
 ### 5. Start the browser UI
@@ -206,7 +206,7 @@ traces. It calls the same FastAPI endpoints documented above.
 Verify all components in another terminal:
 
 ```powershell
-Invoke-RestMethod http://127.0.0.1:8000/health | ConvertTo-Json -Depth 6
+Invoke-RestMethod http://localhost:8000/health | ConvertTo-Json -Depth 6
 ```
 
 The top-level health status should be `ok`. A `degraded` result identifies the exact missing or
@@ -283,9 +283,9 @@ model with a different dimension produces an explicit error and requires a rebui
 ```powershell
 curl.exe -sS -X POST `
   -F "file=@C:\docs\employee-handbook.pdf;type=application/pdf" `
-  http://127.0.0.1:8000/api/ingest
+  http://localhost:8000/api/ingest
 
-Invoke-RestMethod http://127.0.0.1:8000/api/documents
+Invoke-RestMethod http://localhost:8000/api/documents
 ```
 
 `curl.exe` is used because it works in both Windows PowerShell 5.1 and PowerShell 7. In PowerShell
@@ -302,7 +302,7 @@ Delete a document:
 
 ```powershell
 Invoke-RestMethod -Method Delete `
-  -Uri http://127.0.0.1:8000/api/documents/<document-id>
+  -Uri http://localhost:8000/api/documents/<document-id>
 ```
 
 Deletion removes its registry, original source, Markdown, OKF document/reference, and Qdrant points.
@@ -316,7 +316,7 @@ $body = @{
   query = 'Compare the authentication method in Document A with Document B.'
 } | ConvertTo-Json
 
-Invoke-RestMethod -Method Post -Uri http://127.0.0.1:8000/api/query `
+Invoke-RestMethod -Method Post -Uri http://localhost:8000/api/query `
   -ContentType 'application/json' -Body $body | ConvertTo-Json -Depth 8
 ```
 
@@ -350,12 +350,12 @@ relevance. Staleness is disclosed to answer generation.
 ## Traces and analytics
 
 ```powershell
-Invoke-RestMethod http://127.0.0.1:8000/api/queries
-Invoke-RestMethod http://127.0.0.1:8000/api/queries/<query-id>
-Invoke-RestMethod http://127.0.0.1:8000/api/trace/<query-id>
-Invoke-RestMethod http://127.0.0.1:8000/api/analytics/questions
-Invoke-RestMethod http://127.0.0.1:8000/api/analytics/comparisons
-Invoke-RestMethod http://127.0.0.1:8000/api/stats
+Invoke-RestMethod http://localhost:8000/api/queries
+Invoke-RestMethod http://localhost:8000/api/queries/<query-id>
+Invoke-RestMethod http://localhost:8000/api/trace/<query-id>
+Invoke-RestMethod http://localhost:8000/api/analytics/questions
+Invoke-RestMethod http://localhost:8000/api/analytics/comparisons
+Invoke-RestMethod http://localhost:8000/api/stats
 ```
 
 Comparison pairs are case-insensitive and canonicalized, so `A vs B` and `B vs A` increment one
